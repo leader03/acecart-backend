@@ -74,13 +74,62 @@ const loginUser = asyncHandler( async (req,res) => {
 
 
 //@desc Current user info
-//@route POST /api/users/current
+//@route GET /api/users/current
 //@access private
 const currentUser = asyncHandler(async (req, res) => {
-    res.json(req.user);
+    const user = await User.findById(req.user.id)
+    const userData = user.role === "admin" ? 
+    {
+      id: user._id,
+      username: user.username,
+      role: user.role
+    }
+    :
+    {
+      vendor_id: user._id,
+      username: user.username,
+      role: user.role,
+      full_name: user.full_name,
+      restaurant_name: user.restaurant_name,
+      contact_no: user.contact_no,
+      location: user.location
+    }
+    res.status(200).json(userData);
   });
 
+const updateCurrentUser = asyncHandler(async (req,res) => {
+  if(req.user.role === "admin") {
+    res.status(404)
+    throw new Error("Can't Update Admin")
+  }
+  // if(req.body.username, req.body.role) {
+  //   res.status(403)
+  //   throw new Error("Can't update this field")
+  // }
+  
+  const allowedFields = ["full_name", "restaurant_name", "contact_no", "location"];
+
+  // Check if any field other than allowedFields is present in the request body
+  const invalidFields = Object.keys(req.body).filter(field => !allowedFields.includes(field));
+
+  if (invalidFields.length > 0) {
+    res.status(403);
+    throw new Error(`Can't update fields: ${invalidFields.join(', ')}`);
+  }
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    {
+      full_name: req.body.full_name,
+      restaurant_name: req.body.restaurant_name,
+      contact_no: req.body.contact_no,
+      location: req.body.location
+    },
+    { new: true }
+  )
+  res.status(200).json(updatedUser)
+})
 
 
 
-module.exports = {registerUser, loginUser, currentUser}
+
+module.exports = {registerUser, loginUser, currentUser, updateCurrentUser}

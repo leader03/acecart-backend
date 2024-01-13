@@ -11,6 +11,7 @@ app.use(express.json())
 app.use("/api/users", require("./routes/userRoutes"))
 app.use("/api/category", require("./routes/categoryRoutes"))
 app.use("/api/product", require("./routes/productRoutes"))
+app.use("/api", require("./routes/accountRoutes"))
 
 app.use(errorHandler)
 

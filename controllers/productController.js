@@ -16,7 +16,9 @@ const getProducts = asyncHandler(async (req, res) => {
             res.status(403)
             throw new Error("This user doesn't have Products")
         }
-        products = await Product.find({ user_id: req.params.vendor_id })
+        const categorys = await Category.find({user_id: req.params.vendor_id})
+        products = await Product.find({category_id: categorys._id})
+        // products = await Product.find({ user_id: req.params.vendor_id })
     }
     else {
         products = await Product.find({ user_id: req.user.id });

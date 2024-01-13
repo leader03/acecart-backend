@@ -15,7 +15,7 @@ const userSchema = mongoose.Schema(
         role: {
             type: String,
             enum: ['staticuser','dynamicuser', 'admin'],
-            default: 'user'
+            default: 'staticuser'
         },
         full_name: {
             type: String
