@@ -16,12 +16,55 @@ const getProducts = asyncHandler(async (req, res) => {
             res.status(403)
             throw new Error("This user doesn't have Products")
         }
-        const categorys = await Category.find({user_id: req.params.vendor_id})
-        products = await Product.find({category_id: categorys._id})
-        // products = await Product.find({ user_id: req.params.vendor_id })
+        const categorys = await Category.find({ user_id: req.params.vendor_id })
+        const categoryIds = categorys.map(category => category._id);
+        products = await Product.find({ category_id: { $in: categoryIds } })
     }
     else {
-        products = await Product.find({ user_id: req.user.id });
+        const categorys = await Category.find({ user_id: req.user.id })
+        const categoryIds = categorys.map(category => category._id);
+        products = await Product.find({ category_id: { $in: categoryIds } });
+    }
+    res.status(200).json(products);
+});
+
+
+const getSpecialProducts = asyncHandler(async (req, res) => {
+    var products;
+    if (req.params.vendor_id) {
+        const user = await User.findById(req.params.vendor_id)
+        if (user.role == "staticuser") {
+            res.status(403)
+            throw new Error("This user doesn't have Products")
+        }
+        const categorys = await Category.find({ user_id: req.params.vendor_id })
+        const categoryIds = categorys.map(category => category._id);
+        products = await Product.find({ category_id: { $in: categoryIds }, todays_special: true })
+    }
+    else {
+        const categorys = await Category.find({ user_id: req.user.id })
+        const categoryIds = categorys.map(category => category._id);
+        products = await Product.find({ category_id: { $in: categoryIds }, todays_special: true })
+    }
+    res.status(200).json(products);
+});
+
+const getExclusiveProducts = asyncHandler(async (req, res) => {
+    var products;
+    if (req.params.vendor_id) {
+        const user = await User.findById(req.params.vendor_id)
+        if (user.role == "staticuser") {
+            res.status(403)
+            throw new Error("This user doesn't have Products")
+        }
+        const categorys = await Category.find({ user_id: req.params.vendor_id })
+        const categoryIds = categorys.map(category => category._id);
+        products = await Product.find({ category_id: { $in: categoryIds }, exclusive: true })
+    }
+    else {
+        const categorys = await Category.find({ user_id: req.user.id })
+        const categoryIds = categorys.map(category => category._id);
+        products = await Product.find({ category_id: { $in: categoryIds }, exclusive: true })
     }
     res.status(200).json(products);
 });
@@ -35,21 +78,28 @@ const createProduct = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error("All fields are mandatory !");
     }
-    const category = await Category.findOne({ _id: category_id, user_id: req.user.id})
-    console.log(category);
-    if(!category) {
-        res.status(404);
-        throw new Error("You cannot add product to other's Category")
-    }
-    const product = await Product.create({
-        category_id,
-        name,
-        price,
-        is_available,
-        user_id: req.user.id,
-    });
+    var category;
+    try {
+        category = await Category.findById(category_id)
+        if (!category) {
+            return res.status(404).json({ error: "Category not found!" });
+        }
 
-    res.status(201).json(product);
+        if (category.user_id.toString() !== req.user.id) {
+            return res.status(403).json({ error: "You cannot add product to other's Category" });
+        }
+        const product = await Product.create({
+            category_id,
+            name,
+            price,
+            is_available,
+            user_id: req.user.id,
+        });
+
+        res.status(201).json(product);
+    } catch (error) {
+        res.status(500).json({ error: "Internal Server Error" })
+    }
 });
 
 //@desc Get contact
@@ -79,17 +129,48 @@ const updateProduct = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("Product not found");
     }
-
-    if (product.user_id.toString() !== req.user.id) {
+    const category = await Category.findOne({ _id: product.category_id })
+    if (category.user_id.toString() !== req.user.id) {
         res.status(403);
         throw new Error("User don't have permission to update other user Product");
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-        req.params.product_id,
-        req.body,
-        { new: true }
-    );
+    const { product_discount } = req.body
+    var newPrice;
+    var updatedProduct
+    if (typeof product_discount !== 'undefined') {
+        if (product_discount > 0) {
+            newPrice = product.price - (product_discount * product.price / 100)
+            updatedProduct = await Product.findByIdAndUpdate(
+                req.params.product_id,
+                {
+                    exclusive: true,
+                    product_discount: product_discount,
+                    product_newprice: newPrice
+                },
+                { new: true }
+            )
+        }
+        else {
+            updatedProduct = await Product.findByIdAndUpdate(
+                req.params.product_id,
+                {
+                    exclusive: false,
+                    product_discount: null,
+                    product_newprice: null,
+                    ...req.body
+                },
+                { new: true }
+            );
+        }
+    }
+    else {
+        updatedProduct = await Product.findByIdAndUpdate(
+            req.params.product_id,
+            req.body,
+            { new: true }
+        )
+    }
 
     res.status(200).json(updatedProduct);
 });
@@ -103,9 +184,10 @@ const deleteProduct = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("Product not found");
     }
-    if (product.user_id.toString() !== req.user.id) {
+    const category = await Category.findOne({ _id: product.category_id })
+    if (category.user_id.toString() !== req.user.id) {
         res.status(403);
-        throw new Error("User don't have permission to update other user Product");
+        throw new Error("User don't have permission to delete other user Product");
     }
     await Product.deleteOne({ _id: req.params.product_id });
     res.status(200).json(product);
@@ -113,6 +195,8 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
 module.exports = {
     getProducts,
+    getSpecialProducts,
+    getExclusiveProducts,
     createProduct,
     getProduct,
     updateProduct,

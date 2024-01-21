@@ -2,11 +2,6 @@ const mongoose = require("mongoose")
 
 const productSchema = mongoose.Schema(
     {
-        user_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            ref: "User"
-        },
         category_id: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
@@ -36,10 +31,12 @@ const productSchema = mongoose.Schema(
             default: false
         },
         product_discount: {
-            type: Number
+            type: Number,
+            default: null
         },
         product_newprice: {
-            type: Number
+            type: Number,
+            default: null
         },
         image: {
             type: String

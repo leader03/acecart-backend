@@ -20,16 +20,36 @@ const getAllUsers = asyncHandler( async (req,res) => {
 
 const getStaticUsers = asyncHandler( async (req,res) => {
     const users = await User.find({role: {$eq: "staticuser"}})
-    res.status(200).json(users)
+    const userData = users.map(user => {
+        return {
+            username: user.username,
+            role: user.role,
+            full_name: user.full_name || "",
+            restaurant_name: user.restaurant_name || "",
+            contact_no: user.contact_no || "",
+            location: user.location || ""
+        }
+    })
+    res.status(200).json(userData)
 })
 
 const getDynamicUsers = asyncHandler( async (req,res) => {
     const users = await User.find({role: {$eq: "dynamicuser"}})
-    res.status(200).json(users)
+    const userData = users.map(user => {
+        return {
+            username: user.username,
+            role: user.role,
+            full_name: user.full_name || "",
+            restaurant_name: user.restaurant_name || "",
+            contact_no: user.contact_no || "",
+            location: user.location || ""
+        }
+    })
+    res.status(200).json(userData)
 })
 
 const getUserDetail = asyncHandler( async (req,res) => {
-    const users = await User.findById(req.params.vendor_id)
+    const user = await User.findById(req.params.vendor_id)
     res.status(200).json(users)
 })
 

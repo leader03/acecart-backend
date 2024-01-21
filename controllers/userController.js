@@ -42,6 +42,21 @@ const registerUser = asyncHandler( async (req,res) => {
 })
 
 
+const changePassword = asyncHandler(async (req,res) => {
+  const {password} = req.body
+  if(!password) {
+    res.status(400)
+    throw new Error("All fields are mandotary")
+}
+  const hashedPassword = await bcrypt.hash(password,10)
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    {password: hashedPassword}
+  )
+  res.status(200).json("message: Password Changed Successfully")
+})
+
+
 //@desc Login user
 //@route POST /api/users/login
 //@access public
@@ -132,4 +147,4 @@ const updateCurrentUser = asyncHandler(async (req,res) => {
 
 
 
-module.exports = {registerUser, loginUser, currentUser, updateCurrentUser}
+module.exports = {registerUser, loginUser, currentUser, updateCurrentUser, changePassword}
